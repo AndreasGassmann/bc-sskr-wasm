@@ -1,0 +1,406 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Style-Type" content="text/css" />
+    <title>SSKR Demo</title>
+
+    <link rel="stylesheet" href="./water.css" />
+
+    <style>
+      .warning {
+        background-color: orange;
+        padding: 20px;
+        border-radius: 5px;
+      }
+
+      pre {
+        overflow-x: scroll;
+      }
+
+      .loader {
+        border: 4px solid #f3f3f3; /* Light grey */
+        border-top: 4px solid #0066ff; /* Blue */
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+
+    <script type="text/javascript" src="./sskr.js"></script>
+    <script src="./index.min.js"></script>
+  </head>
+
+  <body>
+    <dialog id="dialog">
+      <header>
+        <h3>Shard Information</h3>
+      </header>
+      <form method="dialog">
+        <p id="dialog-content"></p>
+        <menu>
+          <button value="done">Done</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <div id="loader">
+      <div class="loader" style="display: block"></div>
+      Initializing WASM...
+    </div>
+
+    <div id="container" style="display: none">
+      <h1>SSKR Demo</h1>
+
+      <br />
+
+      <div class="warning">
+        ONLY USE THIS WEBSITE FOR TESTING PURPOSES. DO NOT ENTER YOUR ACTUAL
+        SEED ON HERE.
+      </div>
+
+      <br />
+
+      <br />
+
+      <h2>Create</h2>
+      <table>
+        <tr>
+          <td width="20%">HEX Seed</td>
+          <td><input style="width: 97%" id="create-input" /></td>
+        </tr>
+        <tr>
+          <td width="20%">Groups</td>
+          <td>
+            <select id="create-groups">
+              <option value="1" selected>1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+              <option value="7">7</option>
+              <option value="8">8</option>
+              <option value="9">9</option>
+              <option value="10">10</option>
+              <option value="11">11</option>
+              <option value="12">12</option>
+              <option value="13">13</option>
+              <option value="14">14</option>
+              <option value="15">15</option>
+              <option value="16">16</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td width="20%">Group Threshold</td>
+          <td><div id="create-group-threshold"></div></td>
+        </tr>
+        <tr>
+          <td width="20%">Member Threshold</td>
+          <td><div id="create-member-thresholds"></div></td>
+        </tr>
+        <tr>
+          <td width="20%">
+            <button id="create">Create</button>
+          </td>
+          <td></td>
+        </tr>
+        <tr>
+          <td colspan="2"><pre id="create-output"></pre></td>
+        </tr>
+      </table>
+
+      <h2>Combine</h2>
+      <textarea id="combine-input"></textarea>
+      <button id="combine">Combine</button>
+
+      <br />
+
+      <input style="width: 97%" id="combine-output" />
+
+      <h2>Shard Info</h2>
+      <textarea id="shard-info-input"></textarea>
+      <button id="getShardInfo">Get Shard Info</button>
+
+      <br />
+
+      <h2>Bytewords Encode (will be removed before release)</h2>
+      <textarea id="byteword-encode-input" placeholder="HEX string"></textarea>
+
+      <select id="byteword-encode-style">
+        <option value="standard">Standard</option>
+        <option value="uri">URI</option>
+        <option value="minimal">Minimal</option>
+      </select>
+      <button id="byteword-encode-convert">Convert</button>
+
+      <textarea id="byteword-encode-output"></textarea>
+
+      <h2>Bytewords Decode (will be removed before release)</h2>
+      <textarea id="byteword-decode-input" placeholder="Bytewords"></textarea>
+
+      <button id="byteword-decode-convert">Convert</button>
+
+      <textarea id="byteword-decode-output"></textarea>
+    </div>
+
+    <script>
+      sskr.ready.then(() => {
+        let groups = [];
+        document.getElementById("container").style.display = "block";
+        document.getElementById("loader").style.display = "none";
+
+        const createGroupThresholdSelect = (num) => {
+          const select = document.createElement("select");
+          select.id = "create-group-threshold-select";
+
+          groups = groups.slice(0, num);
+          for (let x = 0; x < num; x++) {
+            const option = document.createElement("option");
+            option.value = (x + 1).toString();
+            option.text = (x + 1).toString();
+            select.appendChild(option);
+          }
+
+          document.getElementById("create-group-threshold").innerHTML = "";
+          document.getElementById("create-group-threshold").appendChild(select);
+
+          document.getElementById("create-member-thresholds").innerHTML = "";
+
+          for (let x = 0; x < num; x++) {
+            if (!groups[x]) {
+              groups[x] = [1, 1];
+            }
+            const selectMemberSelect = document.createElement("select");
+            selectMemberSelect.addEventListener(
+              "change",
+              function () {
+                console.log(this.value);
+                const value = parseInt(this.value, 10);
+                const group = groups[x];
+                group[1] = value;
+              },
+              false
+            );
+            selectMemberSelect.id = `create-member-select-${x + 1}`;
+            const selectMemberThresholdSelect = document.createElement(
+              "select"
+            );
+            selectMemberThresholdSelect.id = `create-member-threshold-select-${
+              x + 1
+            }`;
+            selectMemberThresholdSelect.addEventListener(
+              "change",
+              function () {
+                console.log(this.value);
+                const value = parseInt(this.value, 10);
+                const group = groups[x];
+                group[0] = value;
+              },
+              false
+            );
+
+            for (let y = 0; y < 16; y++) {
+              const option = document.createElement("option");
+              option.value = (y + 1).toString();
+              option.text = (y + 1).toString();
+              selectMemberSelect.appendChild(option);
+            }
+
+            const option = document.createElement("option");
+            option.value = "1";
+            option.text = "1";
+            selectMemberThresholdSelect.appendChild(option);
+
+            selectMemberSelect.addEventListener(
+              "change",
+              function () {
+                selectMemberThresholdSelect.innerHTML = "";
+                for (let y = 0; y < parseInt(this.value, 10); y++) {
+                  const option = document.createElement("option");
+                  option.value = (y + 1).toString();
+                  option.text = (y + 1).toString();
+                  selectMemberThresholdSelect.appendChild(option);
+                }
+              },
+              false
+            );
+
+            const title = document.createElement("h3");
+            title.innerHTML = `Group ${x + 1}`;
+            const memberAmount = document.createElement("p");
+            memberAmount.innerHTML = `Member Amount`;
+            const memberThreshold = document.createElement("p");
+            memberThreshold.innerHTML = `Member Threshold`;
+            const table = document.createElement("table");
+            {
+              const tr = document.createElement("tr");
+              const td1 = document.createElement("td");
+              td1.width = "30%";
+              td1.appendChild(memberAmount);
+              const td2 = document.createElement("td");
+              td2.appendChild(selectMemberSelect);
+              tr.appendChild(td1);
+              tr.appendChild(td2);
+              table.appendChild(tr);
+            }
+            {
+              const tr = document.createElement("tr");
+              const td1 = document.createElement("td");
+              td1.appendChild(memberThreshold);
+              const td2 = document.createElement("td");
+              td2.appendChild(selectMemberThresholdSelect);
+              tr.appendChild(td1);
+              tr.appendChild(td2);
+              table.appendChild(tr);
+            }
+
+            document
+              .getElementById("create-member-thresholds")
+              .appendChild(title);
+            document
+              .getElementById("create-member-thresholds")
+              .appendChild(table);
+          }
+        };
+
+        const groupsValue = parseInt(
+          document.getElementById("create-groups").value,
+          10
+        );
+        document.getElementById("create-groups").addEventListener(
+          "change",
+          function () {
+            console.log(this.value);
+            createGroupThresholdSelect(parseInt(this.value, 10));
+          },
+          false
+        );
+        createGroupThresholdSelect(groupsValue);
+
+        document.getElementById("create").addEventListener("click", () => {
+          const input = document.getElementById("create-input").value;
+          const numberOfGroups = parseInt(
+            document.getElementById("create-groups").value,
+            10
+          );
+          const groupThreshold = parseInt(
+            document.getElementById("create-group-threshold-select").value,
+            10
+          );
+          console.log("groupThreshold", groupThreshold);
+          console.log("ENTERED GROUPS INFO", groups);
+          sskr
+            .sskrGenerate(groupThreshold, groups, input)
+            .then(async (shards) => {
+              console.log("NEW SHARDS", shards);
+
+              const info = await sskr.getShardInfo(shards[0]);
+              const out = [
+                `You need ${groupThreshold} out of ${numberOfGroups} groups. (Identifier: ${info.identifier})`,
+              ];
+              let lastGroup = -1;
+              for (const shard of shards) {
+                const info = await sskr.getShardInfo(shard);
+                if (info.groupIndex !== lastGroup) {
+                  console.log(info);
+                  out.push(`\nGroup ${info.groupIndex + 1}`);
+                  out.push(
+                    `${info.memberThreshold} of ${
+                      groups[info.groupIndex][1]
+                    } shares in this group are required.`
+                  );
+                  lastGroup = info.groupIndex;
+                }
+                out.push(sskr.shardToByteWords(shard));
+              }
+
+              document.getElementById("create-output").innerHTML = out.join(
+                "\n"
+              );
+            })
+            .catch((error) => alert(error));
+        });
+
+        document.getElementById("combine").addEventListener("click", () => {
+          const input = document.getElementById("combine-input").value;
+
+          console.log(input);
+          const processedShards = input
+            .split("\n")
+            .filter((l) => l.length > 0)
+            .map((s) => sskr.byteWordsToShard(s));
+          console.log(processedShards);
+          sskr
+            .sskrCombine(processedShards)
+            .then((entropy) => {
+              console.log("asdf", entropy);
+              document.getElementById("combine-output").value = entropy;
+            })
+            .catch((error) => alert(error));
+        });
+
+        document
+          .getElementById("getShardInfo")
+          .addEventListener("click", () => {
+            const shard = document
+              .getElementById("shard-info-input")
+              .value.trim();
+            const bytes = sskr.byteWordsToShard(shard);
+            sskr.getShardInfo(bytes).then((res) => {
+              showDialog(`<pre>${JSON.stringify(res, null, 2)}</pre>`);
+            });
+          });
+
+        document
+          .getElementById("byteword-encode-convert")
+          .addEventListener("click", () => {
+            const input = document.getElementById("byteword-encode-input")
+              .value;
+            const style = document.getElementById("byteword-encode-style")
+              .value;
+            console.log(style, input);
+
+            const bw = sskr.bytewordEncode(input, style);
+
+            document.getElementById("byteword-encode-output").innerHTML = bw;
+          });
+        document
+          .getElementById("byteword-decode-convert")
+          .addEventListener("click", () => {
+            const input = document.getElementById("byteword-decode-input")
+              .value;
+
+            let style = "minimal";
+            if (input.indexOf(" ") >= 0) {
+              style = "standard";
+            }
+            if (input.indexOf("-") >= 0) {
+              style = "uri";
+            }
+
+            const bytes = sskr.bytewordDecode(input, style);
+
+            document.getElementById("byteword-decode-output").innerHTML = bytes;
+          });
+      });
+
+      const showDialog = (html) => {
+        document.getElementById("dialog-content").innerHTML = html;
+        document.getElementById("dialog").showModal();
+      };
+    </script>
+  </body>
+</html>
