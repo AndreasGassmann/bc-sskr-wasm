@@ -15,5 +15,6 @@ TODO
 
 ### UI
 
+- [ ] Add info (sskr, other tools, etc.)
 - [ ] Improve Group updates (if more than 1)
 - [ ] Remove Bytewords code + Bytewords UI
