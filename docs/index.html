@@ -15,7 +15,7 @@
         border-radius: 5px;
       }
 
-      pre {
+      .scroll {
         overflow-x: scroll;
       }
 
@@ -43,18 +43,6 @@
   </head>
 
   <body>
-    <dialog id="dialog">
-      <header>
-        <h3>Shard Information</h3>
-      </header>
-      <form method="dialog">
-        <p id="dialog-content"></p>
-        <menu>
-          <button value="done">Done</button>
-        </menu>
-      </form>
-    </dialog>
-
     <div id="loader">
       <div class="loader" style="display: block"></div>
       Initializing WASM...
@@ -118,7 +106,7 @@
           <td></td>
         </tr>
         <tr>
-          <td colspan="2"><pre id="create-output"></pre></td>
+          <td colspan="2"><pre id="create-output" class="scroll"></pre></td>
         </tr>
       </table>
 
@@ -133,6 +121,8 @@
       <h2>Shard Info</h2>
       <textarea id="shard-info-input"></textarea>
       <button id="getShardInfo">Get Shard Info</button>
+
+      <div id="shard-info-output"></div>
 
       <br />
 
@@ -360,7 +350,9 @@
               .value.trim();
             const bytes = sskr.byteWordsToShard(shard);
             sskr.getShardInfo(bytes).then((res) => {
-              showDialog(`<pre>${JSON.stringify(res, null, 2)}</pre>`);
+              document.getElementById(
+                "shard-info-output"
+              ).innerHTML = `<pre>${JSON.stringify(res, null, 2)}</pre>`;
             });
           });
 
@@ -396,11 +388,6 @@
             document.getElementById("byteword-decode-output").innerHTML = bytes;
           });
       });
-
-      const showDialog = (html) => {
-        document.getElementById("dialog-content").innerHTML = html;
-        document.getElementById("dialog").showModal();
-      };
     </script>
   </body>
 </html>
